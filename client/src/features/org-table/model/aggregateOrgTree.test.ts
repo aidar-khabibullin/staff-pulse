@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { OrgNode } from '@/shared/api/orgNode'
 import { buildOrgTree } from '@/features/org-tree/model/buildOrgTree'
-import { aggregateOrgTree } from './aggregateOrgTree'
+import { aggregateOrgTree, recalcAggregatesForPatch } from './aggregateOrgTree'
 
 function makeNode(overrides: Partial<OrgNode> & { id: string; parentId: string | null }): OrgNode {
   return {
@@ -58,5 +58,44 @@ describe('aggregateOrgTree', () => {
     const second = aggregateOrgTree(tree)
 
     expect(first.get('div-1')).toEqual(second.get('div-1'))
+  })
+})
+
+describe('recalcAggregatesForPatch', () => {
+  it('пересчитывает только затронутый узел и его предков, остальные записи не трогает', () => {
+    const nodes: OrgNode[] = [
+      makeNode({ id: 'div-1', parentId: null, headcount: 5, budget: 1000, performance: 100 }),
+      makeNode({ id: 'dep-1', parentId: 'div-1', headcount: 10, budget: 2000, performance: 50 }),
+      makeNode({ id: 'team-1', parentId: 'dep-1', headcount: 20, budget: 4000, performance: 80 }),
+      makeNode({ id: 'team-2', parentId: 'dep-1', headcount: 20, budget: 4000, performance: 40 }),
+    ]
+
+    const tree = buildOrgTree(nodes)
+    const before = aggregateOrgTree(tree)
+    const team2Before = before.get('team-2')!
+
+    // Патч: team-1.headcount 20 -> 30 (мутируем узел, как это делает сервер)
+    const patchedNodes = nodes.map((node) => (node.id === 'team-1' ? { ...node, headcount: 30 } : node))
+    const patchedTree = buildOrgTree(patchedNodes)
+
+    const after = recalcAggregatesForPatch(patchedTree, before, 'team-1')
+
+    // Затронутый узел и предки пересчитаны
+    expect(after.get('team-1')).toEqual({ totalHeadcount: 30, totalBudget: 4000, avgPerformance: 80 })
+    expect(after.get('dep-1')!.totalHeadcount).toBe(60)
+    expect(after.get('div-1')!.totalHeadcount).toBe(65)
+
+    // Необновлённый узел не тронут (та же ссылка и то же значение)
+    expect(after.get('team-2')).toBe(team2Before)
+  })
+
+  it('возвращает исходную карту, если узел не найден в дереве', () => {
+    const nodes: OrgNode[] = [makeNode({ id: 'div-1', parentId: null })]
+    const tree = buildOrgTree(nodes)
+    const aggregates = aggregateOrgTree(tree)
+
+    const result = recalcAggregatesForPatch(tree, aggregates, 'missing-id')
+
+    expect(result).toBe(aggregates)
   })
 })

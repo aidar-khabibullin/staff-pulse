@@ -14,6 +14,28 @@
   border-left: 1px dashed #d7d9e6;
 }
 
+.childrenAnimated {
+  overflow: hidden;
+  animation: expandIn 200ms ease-out;
+}
+
+@keyframes expandIn {
+  from {
+    max-height: 0;
+    opacity: 0;
+  }
+  to {
+    max-height: 2000px;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .childrenAnimated {
+    animation: none;
+  }
+}
+
 .node {
   display: grid;
 }

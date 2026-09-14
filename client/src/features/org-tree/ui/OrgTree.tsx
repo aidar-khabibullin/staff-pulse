@@ -75,7 +75,7 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
       </div>
 
       {hasChildren && isExpanded && (
-        <ul className={styles.children}>
+        <ul className={`${styles.children} ${styles.childrenAnimated}`}>
           {node.children.map((child) => (
             <OrgTreeItem
               key={child.id}

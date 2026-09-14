@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { fetchOrgTree } from '@/shared/api/orgTreeClient'
 import type { OrgNode } from '@/shared/api/orgNode'
+import type { OrgNodePatchMessage } from '@/shared/lib/useOrgTreeLiveUpdates'
 
 const STALE_TIME_MS = 5000
 const CACHE_KEY = 'org-tree'
@@ -24,7 +25,24 @@ function statusForData(data: OrgNode[]): OrgTreeStatus {
   return data.length === 0 ? 'empty' : 'success'
 }
 
-export function useOrgTree(): OrgTreeState {
+export interface OrgTreeApi extends OrgTreeState {
+  /** Применяет live-патч к данным без полного рефетча. */
+  applyPatch: (patch: OrgNodePatchMessage) => void
+}
+
+function applyPatchToData(data: OrgNode[], patch: OrgNodePatchMessage): OrgNode[] {
+  let changed = false
+  const next = data.map((node) => {
+    if (node.id !== patch.id) {
+      return node
+    }
+    changed = true
+    return { ...node, ...patch.changes, updatedAt: patch.updatedAt }
+  })
+  return changed ? next : data
+}
+
+export function useOrgTree(): OrgTreeApi {
   const cached = cache.get(CACHE_KEY)
   const [state, setState] = useState<OrgTreeState>(() =>
     cached
@@ -76,7 +94,20 @@ export function useOrgTree(): OrgTreeState {
     }
   }, [])
 
-  return state
+  const applyPatch = useCallback((patch: OrgNodePatchMessage) => {
+    const entry = cache.get(CACHE_KEY)
+    if (!entry) {
+      return
+    }
+    const nextData = applyPatchToData(entry.data, patch)
+    if (nextData === entry.data) {
+      return
+    }
+    cache.set(CACHE_KEY, { data: nextData, fetchedAt: entry.fetchedAt })
+    setState((prev) => (prev.data ? { ...prev, data: nextData } : prev))
+  }, [])
+
+  return { ...state, applyPatch }
 }
 
 export function clearOrgTreeCache(): void {

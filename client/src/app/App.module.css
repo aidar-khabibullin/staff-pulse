@@ -21,6 +21,48 @@
   font-size: 0.9rem;
 }
 
+.connectionStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #5b5f77;
+}
+
+.connectionDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #adb0c4;
+}
+
+.connectionStatus[data-status='open'] .connectionDot {
+  background: #2f9e44;
+}
+
+.connectionStatus[data-status='connecting'] .connectionDot,
+.connectionStatus[data-status='reconnecting'] .connectionDot {
+  background: #f0a900;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.connectionStatus[data-status='closed'] .connectionDot {
+  background: #e03131;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connectionDot {
+    animation: none;
+  }
+}
+
 .viewToggle {
   display: inline-flex;
   gap: 0.25rem;

@@ -56,11 +56,36 @@
   background: #e4e6f6;
 }
 
+.row:focus-visible {
+  outline: 2px solid #4c5bd4;
+  outline-offset: -2px;
+}
+
 .cell {
   padding: 0.55rem 0.75rem;
   border-top: 1px solid #e2e4ee;
   font-size: 0.9rem;
   color: #1a1a2e;
+}
+
+.cell[data-updated='true'] {
+  animation: cellHighlight 1.5s ease-out;
+}
+
+@keyframes cellHighlight {
+  from {
+    background-color: #fff3bf;
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell[data-updated='true'] {
+    animation: none;
+    background-color: #fff3bf;
+  }
 }
 
 .emptyCell {
