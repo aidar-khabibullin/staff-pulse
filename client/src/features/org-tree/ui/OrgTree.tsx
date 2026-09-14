@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { OrgNode } from '@/shared/api/orgNode'
 import { collectAllIds, pruneTree } from '@/features/ai-search/model/pruneTree'
 import { buildOrgTree, type OrgTreeNode } from '../model/buildOrgTree'
@@ -11,8 +11,10 @@ import {
   NodeRow,
   PerformanceDot,
   Toggle,
+  ToggleIcon,
   ToggleSpacer,
   Tree,
+  TreeScrollArea,
 } from './OrgTree.styles'
 
 const DEFAULT_EXPANDED_LEVEL = 0
@@ -51,16 +53,17 @@ interface OrgTreeItemProps {
   expandedIds: Set<string>
   onToggle: (id: string) => void
   selectedId?: string | null
+  registerNodeRef: (id: string, element: HTMLDivElement | null) => void
 }
 
-function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemProps) {
+function OrgTreeItem({ node, expandedIds, onToggle, selectedId, registerNodeRef }: OrgTreeItemProps) {
   const hasChildren = node.children.length > 0
   const isExpanded = expandedIds.has(node.id)
   const isSelected = node.id === selectedId
 
   return (
     <Node data-testid="org-tree-node" data-node-id={node.id}>
-      <NodeRow data-selected={isSelected}>
+      <NodeRow data-selected={isSelected} ref={(element) => registerNodeRef(node.id, element)}>
         {hasChildren ? (
           <Toggle
             type="button"
@@ -68,7 +71,7 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
             aria-expanded={isExpanded}
             onClick={() => onToggle(node.id)}
           >
-            {isExpanded ? '▾' : '▸'}
+            <ToggleIcon aria-hidden="true">▸</ToggleIcon>
           </Toggle>
         ) : (
           <ToggleSpacer aria-hidden="true" />
@@ -93,6 +96,7 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
               expandedIds={expandedIds}
               onToggle={onToggle}
               selectedId={selectedId}
+              registerNodeRef={registerNodeRef}
             />
           ))}
         </Children>
@@ -105,9 +109,17 @@ interface OrgTreeProps {
   nodes: OrgNode[]
   selectedId?: string | null
   matchedIds?: Set<string> | null
+  /**
+   * Активный вид ("tree"/"table") из переключателя в шапке. На узких экранах
+   * дерево скрывается через CSS (display: none), пока активна "Таблица" —
+   * scrollIntoView на скрытом элементе браузер молча игнорирует, поэтому этот
+   * проп используется только как сигнал для повторной попытки скролла при
+   * переключении обратно на "Дерево" (см. эффект ниже).
+   */
+  activeView?: 'tree' | 'table'
 }
 
-export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTreeProps) {
+export function OrgTree({ nodes, selectedId = null, matchedIds = null, activeView = 'tree' }: OrgTreeProps) {
   const fullTree = useMemo(() => buildOrgTree(nodes), [nodes])
   const isFiltering = matchedIds !== null
   const tree = useMemo(
@@ -117,12 +129,27 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTree
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
     collectDefaultExpanded(fullTree, new Set()),
   )
+  const nodeElementsRef = useRef<Map<string, HTMLDivElement>>(new Map())
+  const scrolledKeyRef = useRef<string | null>(null)
+  const registerNodeRef = (id: string, element: HTMLDivElement | null): void => {
+    if (element) {
+      nodeElementsRef.current.set(id, element)
+    } else {
+      nodeElementsRef.current.delete(id)
+    }
+  }
 
+  // Раскрывает предков выбранного узла только при смене самого выбора — не на
+  // каждое обновление tree (в т.ч. от live-патчей, которые приходят раз в
+  // секунду), иначе вручную свёрнутая ветка тут же разворачивалась бы обратно
+  // на следующий патч.
+  const treeRef = useRef(tree)
+  treeRef.current = tree
   useEffect(() => {
     if (!selectedId) {
       return
     }
-    const ancestors = findAncestorIds(tree, selectedId)
+    const ancestors = findAncestorIds(treeRef.current, selectedId)
     if (!ancestors || ancestors.length === 0) {
       return
     }
@@ -137,9 +164,31 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTree
       }
       return changed ? next : prev
     })
-  }, [selectedId, tree])
+  }, [selectedId])
 
   const visibleExpandedIds = isFiltering ? collectAllIds(tree) : expandedIds
+
+  // Ждём, пока предки выбранного узла раскроются (эффект выше) и он появится в DOM,
+  // затем скроллим к нему — иначе при клике по строке таблицы выбор в дереве
+  // происходит вне видимой области и незаметен пользователю. Ключ включает
+  // activeView, чтобы повторить попытку при переключении с "Таблицы" на "Дерево"
+  // на узких экранах (первая попытка на скрытой панели браузером игнорируется).
+  useEffect(() => {
+    if (!selectedId) {
+      scrolledKeyRef.current = null
+      return
+    }
+    const key = `${selectedId}:${activeView}`
+    if (scrolledKeyRef.current === key) {
+      return
+    }
+    const element = nodeElementsRef.current.get(selectedId)
+    if (!element) {
+      return
+    }
+    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    scrolledKeyRef.current = key
+  }, [selectedId, visibleExpandedIds, activeView])
 
   const handleToggle = (id: string) => {
     setExpandedIds((prev) => {
@@ -154,20 +203,27 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTree
   }
 
   if (isFiltering && tree.length === 0) {
-    return <Empty data-testid="org-tree-empty">Ничего не найдено</Empty>
+    return (
+      <TreeScrollArea>
+        <Empty data-testid="org-tree-empty">Ничего не найдено</Empty>
+      </TreeScrollArea>
+    )
   }
 
   return (
-    <Tree data-testid="org-tree">
-      {tree.map((node) => (
-        <OrgTreeItem
-          key={node.id}
-          node={node}
-          expandedIds={visibleExpandedIds}
-          onToggle={handleToggle}
-          selectedId={selectedId}
-        />
-      ))}
-    </Tree>
+    <TreeScrollArea>
+      <Tree data-testid="org-tree">
+        {tree.map((node) => (
+          <OrgTreeItem
+            key={node.id}
+            node={node}
+            expandedIds={visibleExpandedIds}
+            onToggle={handleToggle}
+            selectedId={selectedId}
+            registerNodeRef={registerNodeRef}
+          />
+        ))}
+      </Tree>
+    </TreeScrollArea>
   )
 }

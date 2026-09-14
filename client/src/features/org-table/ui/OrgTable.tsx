@@ -2,12 +2,24 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { OrgNode } from '@/shared/api/orgNode'
 import { buildOrgTree, type OrgTreeNode } from '@/features/org-tree/model/buildOrgTree'
+import { computeMatchedIdsByAggregate } from '@/features/ai-search/model/applyStructuredFilter'
+import type { StructuredFilter } from '@/features/ai-search/model/structuredFilter'
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 import { findPathToRoot, type OrgAggregate } from '../model/aggregateOrgTree'
 import { flattenOrgTree } from '../model/flattenOrgTree'
 import { formatBudget } from '../model/formatBudget'
 import { useIncrementalAggregates, type PatchEvent } from '../model/useIncrementalAggregates'
-import { Cell, Container, EmptyCell, FilterInput, HeaderCell, Row, SortIndicator, Table } from './OrgTable.styles'
+import {
+  Cell,
+  Container,
+  EmptyCell,
+  FilterInput,
+  HeaderCell,
+  Row,
+  SortIndicator,
+  Table,
+  TableScrollArea,
+} from './OrgTable.styles'
 
 const FILTER_DEBOUNCE_MS = 250
 const HIGHLIGHT_DURATION_MS = 1500
@@ -68,10 +80,10 @@ interface OrgTableProps {
   selectedId: string | null
   onSelect: (id: string) => void
   lastPatch?: PatchEvent | null
-  matchedIds?: Set<string> | null
+  filter?: StructuredFilter | null
 }
 
-export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matchedIds = null }: OrgTableProps) {
+export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, filter = null }: OrgTableProps) {
   const [filterText, setFilterText] = useState('')
   const debouncedFilterText = useDebouncedValue(filterText, FILTER_DEBOUNCE_MS)
   const [sortColumn, setSortColumn] = useState<SortColumn>('name')
@@ -83,6 +95,13 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matche
   const tree = useMemo(() => buildOrgTree(nodes), [nodes])
   const aggregates = useIncrementalAggregates(tree, lastPatch)
   const flatNodes = useMemo(() => flattenOrgTree(tree), [tree])
+  // Фильтр таблицы сверяется с агрегированными по потомкам значениями (totalHeadcount/
+  // totalBudget/avgPerformance), а не с сырым полем узла — это те же числа, что показаны
+  // в колонках «Всего сотрудников»/«Бюджет суммарный»/«Средняя эффективность».
+  const matchedIds = useMemo(
+    () => (filter ? computeMatchedIdsByAggregate(tree, aggregates, filter) : null),
+    [tree, aggregates, filter],
+  )
 
   const highlightedNodeIds = useMemo(() => {
     if (!lastPatch) {
@@ -175,64 +194,66 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matche
         onChange={(event) => setFilterText(event.target.value)}
       />
 
-      <Table data-testid="org-table">
-        <thead>
-          <tr>
-            {COLUMNS.map((column) => (
-              <HeaderCell
-                key={column.key}
-                data-testid={`org-table-header-${column.key}`}
-                aria-sort={
-                  sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
-                }
-                onClick={() => handleHeaderClick(column.key)}
-                onDoubleClick={() => handleHeaderDoubleClick(column.key)}
-              >
-                {column.label}
-                {sortColumn === column.key && (
-                  <SortIndicator aria-hidden="true">{sortDirection === 'asc' ? ' ▲' : ' ▼'}</SortIndicator>
-                )}
-              </HeaderCell>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(({ node, aggregate }, index) => (
-            <Row
-              key={node.id}
-              ref={(element) => {
-                rowRefs.current[index] = element
-              }}
-              data-testid="org-table-row"
-              data-node-id={node.id}
-              data-selected={node.id === selectedId}
-              tabIndex={index === focusedIndex ? 0 : -1}
-              onClick={() => {
-                setFocusedIndex(index)
-                onSelect(node.id)
-              }}
-              onFocus={() => setFocusedIndex(index)}
-              onKeyDown={(event) => handleRowKeyDown(event, index)}
-            >
-              <Cell>{node.name}</Cell>
-              <Cell>{node.level + 1}</Cell>
-              <Cell data-updated={isCellHighlighted(node.id, 'headcount')}>{aggregate.totalHeadcount}</Cell>
-              <Cell data-updated={isCellHighlighted(node.id, 'budget')}>{formatBudget(aggregate.totalBudget)}</Cell>
-              <Cell data-updated={isCellHighlighted(node.id, 'performance')}>
-                {aggregate.avgPerformance.toFixed(1)}
-              </Cell>
-            </Row>
-          ))}
-
-          {rows.length === 0 && (
+      <TableScrollArea>
+        <Table data-testid="org-table">
+          <thead>
             <tr>
-              <EmptyCell colSpan={COLUMNS.length} data-testid="org-table-empty">
-                Ничего не найдено
-              </EmptyCell>
+              {COLUMNS.map((column) => (
+                <HeaderCell
+                  key={column.key}
+                  data-testid={`org-table-header-${column.key}`}
+                  aria-sort={
+                    sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
+                  }
+                  onClick={() => handleHeaderClick(column.key)}
+                  onDoubleClick={() => handleHeaderDoubleClick(column.key)}
+                >
+                  {column.label}
+                  {sortColumn === column.key && (
+                    <SortIndicator aria-hidden="true">{sortDirection === 'asc' ? ' ▲' : ' ▼'}</SortIndicator>
+                  )}
+                </HeaderCell>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {rows.map(({ node, aggregate }, index) => (
+              <Row
+                key={node.id}
+                ref={(element) => {
+                  rowRefs.current[index] = element
+                }}
+                data-testid="org-table-row"
+                data-node-id={node.id}
+                data-selected={node.id === selectedId}
+                tabIndex={index === focusedIndex ? 0 : -1}
+                onClick={() => {
+                  setFocusedIndex(index)
+                  onSelect(node.id)
+                }}
+                onFocus={() => setFocusedIndex(index)}
+                onKeyDown={(event) => handleRowKeyDown(event, index)}
+              >
+                <Cell>{node.name}</Cell>
+                <Cell>{node.level + 1}</Cell>
+                <Cell data-updated={isCellHighlighted(node.id, 'headcount')}>{aggregate.totalHeadcount}</Cell>
+                <Cell data-updated={isCellHighlighted(node.id, 'budget')}>{formatBudget(aggregate.totalBudget)}</Cell>
+                <Cell data-updated={isCellHighlighted(node.id, 'performance')}>
+                  {aggregate.avgPerformance.toFixed(1)}
+                </Cell>
+              </Row>
+            ))}
+
+            {rows.length === 0 && (
+              <tr>
+                <EmptyCell colSpan={COLUMNS.length} data-testid="org-table-empty">
+                  Ничего не найдено
+                </EmptyCell>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </TableScrollArea>
     </Container>
   )
 }

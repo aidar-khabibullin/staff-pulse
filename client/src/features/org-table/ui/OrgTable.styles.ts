@@ -1,32 +1,49 @@
 import styled, { keyframes } from 'styled-components'
 
 export const Container = styled.div`
-  display: grid;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
 `
 
 export const FilterInput = styled.input`
+  flex: none;
   padding: 0.5rem 0.75rem;
   border-radius: ${({ theme }) => theme.radii.md};
   border: 1px solid ${({ theme }) => theme.colors.border};
   font-size: 0.9rem;
+  transition: border-color ${({ theme }) => theme.motion.fast};
 
   &:focus {
     outline: 2px solid ${({ theme }) => theme.colors.accent};
     outline-offset: 1px;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`
+
+export const TableScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
 `
 
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.md};
-  overflow: hidden;
 `
 
 export const HeaderCell = styled.th`
+  position: sticky;
+  top: 0;
+  z-index: 1;
   text-align: left;
   padding: 0.6rem 0.75rem;
   background: ${({ theme }) => theme.colors.headerBackground};
@@ -35,9 +52,14 @@ export const HeaderCell = styled.th`
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  transition: background-color ${({ theme }) => theme.motion.fast};
 
   &:hover {
     background: ${({ theme }) => theme.colors.accentSelected};
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `
 
@@ -48,6 +70,7 @@ export const SortIndicator = styled.span`
 
 export const Row = styled.tr<{ 'data-selected': boolean }>`
   cursor: pointer;
+  transition: background-color ${({ theme }) => theme.motion.fast};
 
   &:hover {
     background: ${({ theme }) => theme.colors.background};
@@ -60,6 +83,10 @@ export const Row = styled.tr<{ 'data-selected': boolean }>`
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.accent};
     outline-offset: -2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `
 
