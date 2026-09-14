@@ -19,7 +19,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
     },
-    // Клиентский dev-сервер подключается начиная с Фазы 2, когда появится client/.
+    {
+      command: "npm run dev --prefix client",
+      port: CLIENT_PORT,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
   ],
   projects: [
     {
@@ -27,6 +32,13 @@ export default defineConfig({
       testMatch: /.*\.api\.spec\.ts/,
       use: {
         baseURL: `http://localhost:${SERVER_PORT}`,
+      },
+    },
+    {
+      name: "ui",
+      testMatch: /.*\.ui\.spec\.ts/,
+      use: {
+        baseURL: `http://localhost:${CLIENT_PORT}`,
       },
     },
   ],
