@@ -8,7 +8,7 @@
 
 ## Стек
 
-- **Backend** (`server/`): Node.js, Express, TypeScript, Vitest
+- **Backend** (`server/`): Python, FastAPI, uvicorn, pytest
 - **Frontend** (`client/`, появится в Фазе 2): Vite, React, TypeScript
 - **E2E**: Playwright, конфиг и тесты в корне репозитория (`playwright.config.ts`, `e2e/*.spec.ts`)
 
@@ -33,8 +33,8 @@ docs/     — PRD, план фаз, architecture.md, data-model.md, adr/ (поя
 ## Тесты
 
 ```bash
-# Backend unit-тесты (Vitest)
-cd server && npm test
+# Backend unit-тесты (pytest, из активированного venv в server/)
+cd server && source .venv/bin/activate && pytest
 
 # E2E (Playwright, из корня репозитория)
 npm run test:e2e

@@ -14,7 +14,8 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "npm run dev --prefix server",
+      command: `${process.platform === "win32" ? ".venv\\Scripts\\uvicorn" : ".venv/bin/uvicorn"} app.main:app --port ${SERVER_PORT}`,
+      cwd: "server",
       port: SERVER_PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
