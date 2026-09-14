@@ -55,30 +55,3 @@
     transform: rotate(360deg);
   }
 }
-
-.nodeList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.nodeRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.65rem 1rem;
-  border-radius: 0.5rem;
-  background: #ffffff;
-  border: 1px solid #e2e4ee;
-}
-
-.nodeName {
-  font-weight: 600;
-}
-
-.nodeMeta {
-  color: #5b5f77;
-  font-size: 0.85rem;
-}

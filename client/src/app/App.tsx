@@ -1,3 +1,4 @@
+import { OrgTree } from '@/features/org-tree/ui/OrgTree'
 import { useOrgTree } from '@/shared/lib/useOrgTree'
 import styles from './App.module.css'
 
@@ -32,16 +33,7 @@ export function App() {
         </div>
       )}
 
-      {data !== null && data.length > 0 && (
-        <ul className={styles.nodeList} data-testid="org-tree-list">
-          {data.map((node) => (
-            <li key={node.id} className={styles.nodeRow}>
-              <span className={styles.nodeName}>{node.name}</span>
-              <span className={styles.nodeMeta}>{node.headcount} сотрудников</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      {data !== null && data.length > 0 && <OrgTree nodes={data} />}
     </div>
   )
 }
