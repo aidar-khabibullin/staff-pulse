@@ -1,0 +1,71 @@
+.container {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filterInput {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e4ee;
+  font-size: 0.9rem;
+}
+
+.filterInput:focus {
+  outline: 2px solid #4c5bd4;
+  outline-offset: 1px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #e2e4ee;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.headerCell {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: #f0f1f9;
+  color: #383b57;
+  font-size: 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.headerCell:hover {
+  background: #e4e6f6;
+}
+
+.sortIndicator {
+  color: #4c5bd4;
+  font-size: 0.7rem;
+}
+
+.row {
+  cursor: pointer;
+}
+
+.row:hover {
+  background: #f6f7fb;
+}
+
+.row[data-selected='true'] {
+  background: #e4e6f6;
+}
+
+.cell {
+  padding: 0.55rem 0.75rem;
+  border-top: 1px solid #e2e4ee;
+  font-size: 0.9rem;
+  color: #1a1a2e;
+}
+
+.emptyCell {
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+  color: #5b5f77;
+  border-top: 1px solid #e2e4ee;
+}

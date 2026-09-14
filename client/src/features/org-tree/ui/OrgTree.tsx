@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { OrgNode } from '@/shared/api/orgNode'
 import { buildOrgTree, type OrgTreeNode } from '../model/buildOrgTree'
 import styles from './OrgTree.module.css'
@@ -15,6 +15,19 @@ function collectDefaultExpanded(nodes: OrgTreeNode[], acc: Set<string>): Set<str
   return acc
 }
 
+function findAncestorIds(nodes: OrgTreeNode[], targetId: string, path: string[] = []): string[] | null {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return path
+    }
+    const found = findAncestorIds(node.children, targetId, [...path, node.id])
+    if (found) {
+      return found
+    }
+  }
+  return null
+}
+
 function performanceLevel(performance: number): 'high' | 'medium' | 'low' {
   if (performance >= 80) return 'high'
   if (performance >= 50) return 'medium'
@@ -25,15 +38,17 @@ interface OrgTreeItemProps {
   node: OrgTreeNode
   expandedIds: Set<string>
   onToggle: (id: string) => void
+  selectedId?: string | null
 }
 
-function OrgTreeItem({ node, expandedIds, onToggle }: OrgTreeItemProps) {
+function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemProps) {
   const hasChildren = node.children.length > 0
   const isExpanded = expandedIds.has(node.id)
+  const isSelected = node.id === selectedId
 
   return (
     <li className={styles.node} data-testid="org-tree-node" data-node-id={node.id}>
-      <div className={styles.nodeRow}>
+      <div className={styles.nodeRow} data-selected={isSelected}>
         {hasChildren ? (
           <button
             type="button"
@@ -62,7 +77,13 @@ function OrgTreeItem({ node, expandedIds, onToggle }: OrgTreeItemProps) {
       {hasChildren && isExpanded && (
         <ul className={styles.children}>
           {node.children.map((child) => (
-            <OrgTreeItem key={child.id} node={child} expandedIds={expandedIds} onToggle={onToggle} />
+            <OrgTreeItem
+              key={child.id}
+              node={child}
+              expandedIds={expandedIds}
+              onToggle={onToggle}
+              selectedId={selectedId}
+            />
           ))}
         </ul>
       )}
@@ -72,13 +93,35 @@ function OrgTreeItem({ node, expandedIds, onToggle }: OrgTreeItemProps) {
 
 interface OrgTreeProps {
   nodes: OrgNode[]
+  selectedId?: string | null
 }
 
-export function OrgTree({ nodes }: OrgTreeProps) {
+export function OrgTree({ nodes, selectedId = null }: OrgTreeProps) {
   const tree = useMemo(() => buildOrgTree(nodes), [nodes])
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
     collectDefaultExpanded(tree, new Set()),
   )
+
+  useEffect(() => {
+    if (!selectedId) {
+      return
+    }
+    const ancestors = findAncestorIds(tree, selectedId)
+    if (!ancestors || ancestors.length === 0) {
+      return
+    }
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      let changed = false
+      for (const ancestorId of ancestors) {
+        if (!next.has(ancestorId)) {
+          next.add(ancestorId)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [selectedId, tree])
 
   const handleToggle = (id: string) => {
     setExpandedIds((prev) => {
@@ -95,7 +138,13 @@ export function OrgTree({ nodes }: OrgTreeProps) {
   return (
     <ul className={styles.tree} data-testid="org-tree">
       {tree.map((node) => (
-        <OrgTreeItem key={node.id} node={node} expandedIds={expandedIds} onToggle={handleToggle} />
+        <OrgTreeItem
+          key={node.id}
+          node={node}
+          expandedIds={expandedIds}
+          onToggle={handleToggle}
+          selectedId={selectedId}
+        />
       ))}
     </ul>
   )

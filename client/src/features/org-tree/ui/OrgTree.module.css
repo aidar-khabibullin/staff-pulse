@@ -28,6 +28,11 @@
   border: 1px solid #e2e4ee;
 }
 
+.nodeRow[data-selected='true'] {
+  background: #e4e6f6;
+  border-color: #4c5bd4;
+}
+
 .toggle {
   width: 1.5rem;
   height: 1.5rem;

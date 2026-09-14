@@ -21,6 +21,57 @@
   font-size: 0.9rem;
 }
 
+.viewToggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  padding: 0.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e4ee;
+  border-radius: 0.6rem;
+}
+
+.viewToggleButton {
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: #5b5f77;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.viewToggleButton[aria-pressed='true'] {
+  background: #4c5bd4;
+  color: #ffffff;
+}
+
+.layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1279.98px) {
+  .layout[data-view='tree'] .tablePanel {
+    display: none;
+  }
+
+  .layout[data-view='table'] .treePanel {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .viewToggle {
+    display: none;
+  }
+
+  .layout {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
 .status {
   display: flex;
   align-items: center;
