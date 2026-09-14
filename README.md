@@ -11,7 +11,8 @@
 
 ## Стек
 
-React, Vite, TypeScript.
+Backend: Python, FastAPI.
+Frontend: React, Vite, TypeScript.
 
 **Будет плюсом:** использование styled-components для стилизации.
 
@@ -91,12 +92,14 @@ React, Vite, TypeScript.
 
 > Инструкция запуска одной командой (Docker) появится в Фазе 7 (BONUS). Ниже — текущий способ запуска по частям, актуальный после Фазы 2.
 
-Mock API сервер:
+Mock API сервер (Python 3.12+, FastAPI):
 
 ```bash
 cd server
-npm install
-npm run dev
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --port 4000
 ```
 
 Сервер поднимется на `http://localhost:4000`, эндпоинт — `GET /api/org-tree`.
@@ -111,7 +114,7 @@ npm run dev
 
 Клиент поднимется на `http://localhost:5173` и обращается к API сервера на порту 4000.
 
-E2E-тесты (Playwright, из корня репозитория):
+E2E-тесты (Playwright, из корня репозитория; требуют настроенного `server/.venv` — см. выше):
 
 ```bash
 npm install
@@ -135,6 +138,7 @@ npm run test:e2e
 - **`CLAUDE.md`** — рабочие правила проекта для дальнейшей разработки с Claude Code
 - **Фаза 2 (frontend scaffold и слой данных):** scaffold Vite + React + TypeScript (`client/`), абсолютные импорты (`@/*`), zod-схема и клиент `GET /api/org-tree` с валидацией (`client/src/shared/api/`), кэширующий хук `useOrgTree` (stale-while-revalidate, stale time 5с, отмена запроса через `AbortController` при unmount) (`client/src/shared/lib/useOrgTree.ts`), состояния загрузки/ошибки/пустого ответа без inline-CSS (CSS Modules), unit-тесты на отмену запроса (Vitest + Testing Library), project `ui` в `playwright.config.ts` и Playwright-тест загрузки данных (`e2e/org-tree.ui.spec.ts`)
 - **Фаза 3 (интерактивное дерево орг-структуры):** чистая функция построения иерархии из плоского массива (`client/src/features/org-tree/model/buildOrgTree.ts`) с unit-тестами на группировку по уровням и обработку узлов без родителя; компонент `OrgTree` с раскрытием/скрытием ветвей по клику, вторым уровнем открытым по умолчанию, цветовым индикатором `performance` (зелёный/жёлтый/красный) и стилизацией через CSS Modules (`client/src/features/org-tree/ui/`); component-тесты на дефолтное раскрытие и toggle (Vitest + Testing Library + `user-event`); обновлённый Playwright `ui`-тест на клик-раскрытие узла (`e2e/org-tree.ui.spec.ts`)
+- **Переход backend на Python/FastAPI (`chore/python-fastapi-backend`):** по требованию пользователя (BE-часть тестового задания оценивается на Python/FastAPI) mock API сервер переписан с Node.js/Express/TypeScript на Python 3 + FastAPI + uvicorn с сохранением контракта `GET /api/org-tree` и логики генератора/проверки целостности мок-данных (`server/app/`); unit-тесты перенесены на pytest (`server/tests/`), добавлен тест самого HTTP-эндпоинта через `TestClient`; `playwright.config.ts` обновлён для запуска uvicorn из `server/.venv` вместо `npm run dev`
 
 ### Что переписано руками и почему
 
