@@ -1,0 +1,13 @@
+{
+  "name": "org-structure-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E2E-тесты (Playwright) на уровне репозитория для дашборда мониторинга орг-структуры",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}
