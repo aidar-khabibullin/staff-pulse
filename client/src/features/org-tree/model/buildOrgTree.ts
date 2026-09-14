@@ -5,7 +5,25 @@ export interface OrgTreeNode extends OrgNode {
   level: number
 }
 
+/**
+ * Кэш по ссылке на исходный массив: App, OrgTree и OrgTable строят дерево из
+ * одного и того же `nodes`, поэтому без кэша дерево пересобирается 3 раза на
+ * каждое обновление данных (в т.ч. на каждый live-патч).
+ */
+const treeCache = new WeakMap<OrgNode[], OrgTreeNode[]>()
+
 export function buildOrgTree(nodes: OrgNode[]): OrgTreeNode[] {
+  const cached = treeCache.get(nodes)
+  if (cached) {
+    return cached
+  }
+
+  const tree = buildOrgTreeUncached(nodes)
+  treeCache.set(nodes, tree)
+  return tree
+}
+
+function buildOrgTreeUncached(nodes: OrgNode[]): OrgTreeNode[] {
   const byId = new Map<string, OrgTreeNode>()
 
   for (const node of nodes) {

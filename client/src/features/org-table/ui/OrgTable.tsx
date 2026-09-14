@@ -7,7 +7,7 @@ import { findPathToRoot, type OrgAggregate } from '../model/aggregateOrgTree'
 import { flattenOrgTree } from '../model/flattenOrgTree'
 import { formatBudget } from '../model/formatBudget'
 import { useIncrementalAggregates, type PatchEvent } from '../model/useIncrementalAggregates'
-import styles from './OrgTable.module.css'
+import { Cell, Container, EmptyCell, FilterInput, HeaderCell, Row, SortIndicator, Table } from './OrgTable.styles'
 
 const FILTER_DEBOUNCE_MS = 250
 const HIGHLIGHT_DURATION_MS = 1500
@@ -29,12 +29,12 @@ const COLUMNS: Column[] = [
   { key: 'performance', label: 'Средняя эффективность' },
 ]
 
-interface Row {
+interface TableRow {
   node: OrgTreeNode
   aggregate: OrgAggregate
 }
 
-function sortValue(row: Row, column: SortColumn): string | number {
+function sortValue(row: TableRow, column: SortColumn): string | number {
   switch (column) {
     case 'name':
       return row.node.name
@@ -49,7 +49,7 @@ function sortValue(row: Row, column: SortColumn): string | number {
   }
 }
 
-function compareRows(a: Row, b: Row, column: SortColumn, direction: SortDirection): number {
+function compareRows(a: TableRow, b: TableRow, column: SortColumn, direction: SortDirection): number {
   const va = sortValue(a, column)
   const vb = sortValue(b, column)
 
@@ -166,23 +166,21 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matche
     isHighlightActive && (AGGREGATE_COLUMNS as string[]).includes(column) && (highlightedNodeIds?.has(nodeId) ?? false)
 
   return (
-    <div className={styles.container}>
-      <input
+    <Container>
+      <FilterInput
         type="text"
-        className={styles.filterInput}
         data-testid="org-table-filter"
         placeholder="Фильтр по названию…"
         value={filterText}
         onChange={(event) => setFilterText(event.target.value)}
       />
 
-      <table className={styles.table} data-testid="org-table">
+      <Table data-testid="org-table">
         <thead>
           <tr>
             {COLUMNS.map((column) => (
-              <th
+              <HeaderCell
                 key={column.key}
-                className={styles.headerCell}
                 data-testid={`org-table-header-${column.key}`}
                 aria-sort={
                   sortColumn === column.key ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'
@@ -192,22 +190,19 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matche
               >
                 {column.label}
                 {sortColumn === column.key && (
-                  <span className={styles.sortIndicator} aria-hidden="true">
-                    {sortDirection === 'asc' ? ' ▲' : ' ▼'}
-                  </span>
+                  <SortIndicator aria-hidden="true">{sortDirection === 'asc' ? ' ▲' : ' ▼'}</SortIndicator>
                 )}
-              </th>
+              </HeaderCell>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map(({ node, aggregate }, index) => (
-            <tr
+            <Row
               key={node.id}
               ref={(element) => {
                 rowRefs.current[index] = element
               }}
-              className={styles.row}
               data-testid="org-table-row"
               data-node-id={node.id}
               data-selected={node.id === selectedId}
@@ -219,35 +214,25 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matche
               onFocus={() => setFocusedIndex(index)}
               onKeyDown={(event) => handleRowKeyDown(event, index)}
             >
-              <td className={styles.cell}>{node.name}</td>
-              <td className={styles.cell}>{node.level + 1}</td>
-              <td
-                className={styles.cell}
-                data-updated={isCellHighlighted(node.id, 'headcount')}
-              >
-                {aggregate.totalHeadcount}
-              </td>
-              <td className={styles.cell} data-updated={isCellHighlighted(node.id, 'budget')}>
-                {formatBudget(aggregate.totalBudget)}
-              </td>
-              <td
-                className={styles.cell}
-                data-updated={isCellHighlighted(node.id, 'performance')}
-              >
+              <Cell>{node.name}</Cell>
+              <Cell>{node.level + 1}</Cell>
+              <Cell data-updated={isCellHighlighted(node.id, 'headcount')}>{aggregate.totalHeadcount}</Cell>
+              <Cell data-updated={isCellHighlighted(node.id, 'budget')}>{formatBudget(aggregate.totalBudget)}</Cell>
+              <Cell data-updated={isCellHighlighted(node.id, 'performance')}>
                 {aggregate.avgPerformance.toFixed(1)}
-              </td>
-            </tr>
+              </Cell>
+            </Row>
           ))}
 
           {rows.length === 0 && (
             <tr>
-              <td className={styles.emptyCell} colSpan={COLUMNS.length} data-testid="org-table-empty">
+              <EmptyCell colSpan={COLUMNS.length} data-testid="org-table-empty">
                 Ничего не найдено
-              </td>
+              </EmptyCell>
             </tr>
           )}
         </tbody>
-      </table>
-    </div>
+      </Table>
+    </Container>
   )
 }

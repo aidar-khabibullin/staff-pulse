@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
+import { renderWithTheme as render } from '@/shared/lib/test/renderWithTheme'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import type { OrgNode } from '@/shared/api/orgNode'

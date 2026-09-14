@@ -9,7 +9,22 @@ import { useOrgTree } from '@/shared/lib/useOrgTree'
 import { useDebouncedValue } from '@/shared/lib/useDebouncedValue'
 import { useOrgTreeLiveUpdates, type ConnectionStatus, type OrgNodePatchMessage } from '@/shared/lib/useOrgTreeLiveUpdates'
 import type { PatchEvent } from '@/features/org-table/model/useIncrementalAggregates'
-import styles from './App.module.css'
+import {
+  AppRoot,
+  ConnectionDot,
+  ConnectionStatus as ConnectionStatusBadge,
+  Header,
+  Layout,
+  Spinner,
+  Status,
+  StatusText,
+  Subtitle,
+  TablePanel,
+  Title,
+  TreePanel,
+  ViewToggle,
+  ViewToggleButton,
+} from './App.styles'
 
 const SEARCH_DEBOUNCE_MS = 250
 
@@ -52,10 +67,10 @@ export function App() {
   const connectionStatus = useOrgTreeLiveUpdates(handlePatch)
 
   return (
-    <div className={styles.app}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Орг-структура компании</h1>
-        <p className={styles.subtitle}>Дивизионы → отделы → команды</p>
+    <AppRoot>
+      <Header>
+        <Title>Орг-структура компании</Title>
+        <Subtitle>Дивизионы → отделы → команды</Subtitle>
 
         <AiSearchBar
           value={searchQuery}
@@ -64,64 +79,56 @@ export function App() {
           isActive={debouncedSearchQuery.trim() !== ''}
         />
 
-        <div
-          className={styles.connectionStatus}
-          data-testid="connection-status"
-          data-status={connectionStatus}
-        >
-          <span className={styles.connectionDot} aria-hidden="true" />
+        <ConnectionStatusBadge data-testid="connection-status" data-status={connectionStatus}>
+          <ConnectionDot aria-hidden="true" />
           {CONNECTION_STATUS_LABEL[connectionStatus]}
-        </div>
+        </ConnectionStatusBadge>
 
-        <div className={styles.viewToggle} data-testid="view-toggle" role="group" aria-label="Режим отображения">
-          <button
+        <ViewToggle data-testid="view-toggle" role="group" aria-label="Режим отображения">
+          <ViewToggleButton
             type="button"
-            className={styles.viewToggleButton}
             data-testid="view-toggle-tree"
             aria-pressed={view === 'tree'}
             onClick={() => setView('tree')}
           >
             Дерево
-          </button>
-          <button
+          </ViewToggleButton>
+          <ViewToggleButton
             type="button"
-            className={styles.viewToggleButton}
             data-testid="view-toggle-table"
             aria-pressed={view === 'table'}
             onClick={() => setView('table')}
           >
             Таблица
-          </button>
-        </div>
-      </header>
+          </ViewToggleButton>
+        </ViewToggle>
+      </Header>
 
       {(status === 'loading' || status === 'revalidating') && data === null && (
-        <div className={styles.status} data-testid="org-tree-loading">
-          <span className={styles.spinner} aria-hidden="true" />
-          <span className={styles.statusText}>Загрузка орг-структуры…</span>
-        </div>
+        <Status data-testid="org-tree-loading">
+          <Spinner aria-hidden="true" />
+          <StatusText>Загрузка орг-структуры…</StatusText>
+        </Status>
       )}
 
       {status === 'error' && (
-        <div className={styles.status} data-testid="org-tree-error">
-          <span className={`${styles.statusText} ${styles.statusError}`}>
-            Не удалось загрузить данные: {error?.message ?? 'неизвестная ошибка'}
-          </span>
-        </div>
+        <Status data-testid="org-tree-error">
+          <StatusText $error>Не удалось загрузить данные: {error?.message ?? 'неизвестная ошибка'}</StatusText>
+        </Status>
       )}
 
       {status === 'empty' && (
-        <div className={styles.status} data-testid="org-tree-empty">
-          <span className={styles.statusText}>Орг-структура пуста</span>
-        </div>
+        <Status data-testid="org-tree-empty">
+          <StatusText>Орг-структура пуста</StatusText>
+        </Status>
       )}
 
       {data !== null && data.length > 0 && (
-        <div className={styles.layout} data-view={view}>
-          <section className={styles.treePanel}>
+        <Layout data-view={view}>
+          <TreePanel>
             <OrgTree nodes={data} selectedId={selectedId} matchedIds={matchedIds} />
-          </section>
-          <section className={styles.tablePanel}>
+          </TreePanel>
+          <TablePanel>
             <OrgTable
               nodes={data}
               selectedId={selectedId}
@@ -129,9 +136,9 @@ export function App() {
               lastPatch={lastPatch}
               matchedIds={matchedIds}
             />
-          </section>
-        </div>
+          </TablePanel>
+        </Layout>
       )}
-    </div>
+    </AppRoot>
   )
 }
