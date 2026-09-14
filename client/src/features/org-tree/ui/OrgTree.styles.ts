@@ -8,6 +8,13 @@ const listReset = css`
   gap: 0.4rem;
 `
 
+export const TreeScrollArea = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+`
+
 export const Tree = styled.ul`
   ${listReset}
 `
@@ -49,10 +56,17 @@ export const NodeRow = styled.div<{ 'data-selected': boolean }>`
   border-radius: ${({ theme }) => theme.radii.md};
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};
+  transition:
+    background-color ${({ theme }) => theme.motion.fast},
+    border-color ${({ theme }) => theme.motion.fast};
 
   &[data-selected='true'] {
     background: ${({ theme }) => theme.colors.accentSelected};
     border-color: ${({ theme }) => theme.colors.accent};
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `
 
@@ -69,6 +83,7 @@ export const Toggle = styled.button`
   font-size: 0.85rem;
   cursor: pointer;
   border-radius: ${({ theme }) => theme.radii.sm};
+  transition: background-color ${({ theme }) => theme.motion.fast};
 
   &:hover {
     background: ${({ theme }) => theme.colors.accentHover};
@@ -77,6 +92,24 @@ export const Toggle = styled.button`
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.accent};
     outline-offset: 1px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`
+
+export const ToggleIcon = styled.span`
+  display: inline-flex;
+  transform: rotate(0deg);
+  transition: transform ${({ theme }) => theme.motion.fast};
+
+  ${Toggle}[aria-expanded='true'] & {
+    transform: rotate(90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
   }
 `
 

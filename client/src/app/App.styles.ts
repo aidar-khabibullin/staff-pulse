@@ -2,7 +2,9 @@ import styled, { keyframes } from 'styled-components'
 import type { ConnectionStatus as ConnectionStatusValue } from '@/shared/lib/useOrgTreeLiveUpdates'
 
 export const AppRoot = styled.div`
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   padding: 2rem;
   font-family: ${({ theme }) => theme.font.family};
   color: ${({ theme }) => theme.colors.text};
@@ -10,7 +12,18 @@ export const AppRoot = styled.div`
 `
 
 export const Header = styled.header`
+  flex: none;
   margin-bottom: 1.5rem;
+`
+
+export const Footer = styled.footer`
+  flex: none;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.8rem;
+  text-align: center;
 `
 
 export const Title = styled.h1`
@@ -19,7 +32,7 @@ export const Title = styled.h1`
 `
 
 export const Subtitle = styled.p`
-  margin: 0.25rem 0 0;
+  margin: 0.5rem 0 1rem;
   color: ${({ theme }) => theme.colors.textMuted};
   font-size: 0.9rem;
 `
@@ -31,7 +44,8 @@ const pulse = keyframes`
 `
 
 export const ConnectionStatus = styled.div<{ 'data-status': ConnectionStatusValue }>`
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.75rem;
@@ -65,7 +79,8 @@ export const ConnectionDot = styled.span`
 `
 
 export const ViewToggle = styled.div`
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   gap: 0.25rem;
   margin-top: 1rem;
   padding: 0.25rem;
@@ -86,6 +101,9 @@ export const ViewToggleButton = styled.button`
   color: ${({ theme }) => theme.colors.textMuted};
   font-size: 0.85rem;
   cursor: pointer;
+  transition:
+    background-color ${({ theme }) => theme.motion.fast},
+    color ${({ theme }) => theme.motion.fast};
 
   &[aria-pressed='true'] {
     background: ${({ theme }) => theme.colors.accent};
@@ -96,19 +114,29 @@ export const ViewToggleButton = styled.button`
     outline: 2px solid ${({ theme }) => theme.colors.accent};
     outline-offset: 1px;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `
 
 export const Layout = styled.div<{ 'data-view': 'tree' | 'table' }>`
+  flex: 1;
+  min-height: 0;
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   gap: 1.5rem;
 
   @media (min-width: 1280px) {
     grid-template-columns: 1fr 1fr;
-    align-items: start;
   }
 `
 
 export const TreePanel = styled.section`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
   @media (max-width: 1279.98px) {
     ${Layout}[data-view='table'] & {
       display: none;
@@ -117,6 +145,10 @@ export const TreePanel = styled.section`
 `
 
 export const TablePanel = styled.section`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
   @media (max-width: 1279.98px) {
     ${Layout}[data-view='tree'] & {
       display: none;
@@ -125,10 +157,11 @@ export const TablePanel = styled.section`
 `
 
 export const Status = styled.div`
+  flex: 1;
+  min-height: 12rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 12rem;
   border-radius: ${({ theme }) => theme.radii.xl};
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.border};

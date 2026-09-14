@@ -29,6 +29,9 @@ export const theme = {
   font: {
     family: 'system-ui, sans-serif',
   },
+  motion: {
+    fast: '120ms ease-out',
+  },
 } as const
 
 export type AppTheme = typeof theme
