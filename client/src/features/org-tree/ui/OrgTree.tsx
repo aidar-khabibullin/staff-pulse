@@ -2,7 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import type { OrgNode } from '@/shared/api/orgNode'
 import { collectAllIds, pruneTree } from '@/features/ai-search/model/pruneTree'
 import { buildOrgTree, type OrgTreeNode } from '../model/buildOrgTree'
-import styles from './OrgTree.module.css'
+import {
+  Children,
+  Empty,
+  Node,
+  NodeMeta,
+  NodeName,
+  NodeRow,
+  PerformanceDot,
+  Toggle,
+  ToggleSpacer,
+  Tree,
+} from './OrgTree.styles'
 
 const DEFAULT_EXPANDED_LEVEL = 0
 
@@ -48,35 +59,33 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
   const isSelected = node.id === selectedId
 
   return (
-    <li className={styles.node} data-testid="org-tree-node" data-node-id={node.id}>
-      <div className={styles.nodeRow} data-selected={isSelected}>
+    <Node data-testid="org-tree-node" data-node-id={node.id}>
+      <NodeRow data-selected={isSelected}>
         {hasChildren ? (
-          <button
+          <Toggle
             type="button"
-            className={styles.toggle}
             data-testid="org-tree-toggle"
             aria-expanded={isExpanded}
             onClick={() => onToggle(node.id)}
           >
             {isExpanded ? '▾' : '▸'}
-          </button>
+          </Toggle>
         ) : (
-          <span className={styles.toggleSpacer} aria-hidden="true" />
+          <ToggleSpacer aria-hidden="true" />
         )}
 
-        <span
-          className={styles.performanceDot}
+        <PerformanceDot
           data-performance={performanceLevel(node.performance)}
           title={`Эффективность: ${node.performance}`}
           aria-hidden="true"
         />
 
-        <span className={styles.nodeName}>{node.name}</span>
-        <span className={styles.nodeMeta}>{node.headcount} сотрудников</span>
-      </div>
+        <NodeName>{node.name}</NodeName>
+        <NodeMeta>{node.headcount} сотрудников</NodeMeta>
+      </NodeRow>
 
       {hasChildren && isExpanded && (
-        <ul className={`${styles.children} ${styles.childrenAnimated}`}>
+        <Children>
           {node.children.map((child) => (
             <OrgTreeItem
               key={child.id}
@@ -86,9 +95,9 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
               selectedId={selectedId}
             />
           ))}
-        </ul>
+        </Children>
       )}
-    </li>
+    </Node>
   )
 }
 
@@ -145,15 +154,11 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTree
   }
 
   if (isFiltering && tree.length === 0) {
-    return (
-      <div className={styles.empty} data-testid="org-tree-empty">
-        Ничего не найдено
-      </div>
-    )
+    return <Empty data-testid="org-tree-empty">Ничего не найдено</Empty>
   }
 
   return (
-    <ul className={styles.tree} data-testid="org-tree">
+    <Tree data-testid="org-tree">
       {tree.map((node) => (
         <OrgTreeItem
           key={node.id}
@@ -163,6 +168,6 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTree
           selectedId={selectedId}
         />
       ))}
-    </ul>
+    </Tree>
   )
 }
