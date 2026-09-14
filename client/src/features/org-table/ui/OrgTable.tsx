@@ -68,9 +68,10 @@ interface OrgTableProps {
   selectedId: string | null
   onSelect: (id: string) => void
   lastPatch?: PatchEvent | null
+  matchedIds?: Set<string> | null
 }
 
-export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null }: OrgTableProps) {
+export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, matchedIds = null }: OrgTableProps) {
   const [filterText, setFilterText] = useState('')
   const debouncedFilterText = useDebouncedValue(filterText, FILTER_DEBOUNCE_MS)
   const [sortColumn, setSortColumn] = useState<SortColumn>('name')
@@ -105,10 +106,11 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null }: OrgT
 
     const filtered = flatNodes
       .filter((node) => node.name.toLowerCase().includes(normalizedFilter))
+      .filter((node) => matchedIds === null || matchedIds.has(node.id))
       .map((node) => ({ node, aggregate: aggregates.get(node.id)! }))
 
     return filtered.sort((a, b) => compareRows(a, b, sortColumn, sortDirection))
-  }, [flatNodes, aggregates, debouncedFilterText, sortColumn, sortDirection])
+  }, [flatNodes, aggregates, debouncedFilterText, sortColumn, sortDirection, matchedIds])
 
   useEffect(() => {
     setFocusedIndex((prev) => Math.min(prev, Math.max(rows.length - 1, 0)))

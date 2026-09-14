@@ -108,3 +108,11 @@
   font-size: 0.85rem;
   white-space: nowrap;
 }
+
+.empty {
+  padding: 1rem;
+  color: #5b5f77;
+  border: 1px dashed #d7d9e6;
+  border-radius: 0.5rem;
+  text-align: center;
+}

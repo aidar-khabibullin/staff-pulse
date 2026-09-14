@@ -1,0 +1,30 @@
+.container {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.input {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #d7d9e6;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  min-width: 18rem;
+}
+
+.input:focus-visible {
+  outline: 2px solid #4c5bd4;
+  outline-offset: 1px;
+}
+
+.mode {
+  font-size: 0.75rem;
+  color: #5b5f77;
+}
+
+.mode[data-mode='ai'] {
+  color: #2f9e44;
+}
+
+.mode[data-mode='fallback'] {
+  color: #b8860b;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { OrgNode } from '@/shared/api/orgNode'
+import { collectAllIds, pruneTree } from '@/features/ai-search/model/pruneTree'
 import { buildOrgTree, type OrgTreeNode } from '../model/buildOrgTree'
 import styles from './OrgTree.module.css'
 
@@ -94,12 +95,18 @@ function OrgTreeItem({ node, expandedIds, onToggle, selectedId }: OrgTreeItemPro
 interface OrgTreeProps {
   nodes: OrgNode[]
   selectedId?: string | null
+  matchedIds?: Set<string> | null
 }
 
-export function OrgTree({ nodes, selectedId = null }: OrgTreeProps) {
-  const tree = useMemo(() => buildOrgTree(nodes), [nodes])
+export function OrgTree({ nodes, selectedId = null, matchedIds = null }: OrgTreeProps) {
+  const fullTree = useMemo(() => buildOrgTree(nodes), [nodes])
+  const isFiltering = matchedIds !== null
+  const tree = useMemo(
+    () => (matchedIds ? pruneTree(fullTree, matchedIds) : fullTree),
+    [fullTree, matchedIds],
+  )
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
-    collectDefaultExpanded(tree, new Set()),
+    collectDefaultExpanded(fullTree, new Set()),
   )
 
   useEffect(() => {
@@ -123,6 +130,8 @@ export function OrgTree({ nodes, selectedId = null }: OrgTreeProps) {
     })
   }, [selectedId, tree])
 
+  const visibleExpandedIds = isFiltering ? collectAllIds(tree) : expandedIds
+
   const handleToggle = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev)
@@ -135,13 +144,21 @@ export function OrgTree({ nodes, selectedId = null }: OrgTreeProps) {
     })
   }
 
+  if (isFiltering && tree.length === 0) {
+    return (
+      <div className={styles.empty} data-testid="org-tree-empty">
+        Ничего не найдено
+      </div>
+    )
+  }
+
   return (
     <ul className={styles.tree} data-testid="org-tree">
       {tree.map((node) => (
         <OrgTreeItem
           key={node.id}
           node={node}
-          expandedIds={expandedIds}
+          expandedIds={visibleExpandedIds}
           onToggle={handleToggle}
           selectedId={selectedId}
         />
