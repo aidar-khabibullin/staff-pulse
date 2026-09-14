@@ -134,6 +134,7 @@ npm run test:e2e
 - **E2E-инфраструктура:** конфигурация Playwright (`playwright.config.ts`, project `api`), тест контракта `GET /api/org-tree` (`e2e/org-tree.api.spec.ts`)
 - **`CLAUDE.md`** — рабочие правила проекта для дальнейшей разработки с Claude Code
 - **Фаза 2 (frontend scaffold и слой данных):** scaffold Vite + React + TypeScript (`client/`), абсолютные импорты (`@/*`), zod-схема и клиент `GET /api/org-tree` с валидацией (`client/src/shared/api/`), кэширующий хук `useOrgTree` (stale-while-revalidate, stale time 5с, отмена запроса через `AbortController` при unmount) (`client/src/shared/lib/useOrgTree.ts`), состояния загрузки/ошибки/пустого ответа без inline-CSS (CSS Modules), unit-тесты на отмену запроса (Vitest + Testing Library), project `ui` в `playwright.config.ts` и Playwright-тест загрузки данных (`e2e/org-tree.ui.spec.ts`)
+- **Фаза 3 (интерактивное дерево орг-структуры):** чистая функция построения иерархии из плоского массива (`client/src/features/org-tree/model/buildOrgTree.ts`) с unit-тестами на группировку по уровням и обработку узлов без родителя; компонент `OrgTree` с раскрытием/скрытием ветвей по клику, вторым уровнем открытым по умолчанию, цветовым индикатором `performance` (зелёный/жёлтый/красный) и стилизацией через CSS Modules (`client/src/features/org-tree/ui/`); component-тесты на дефолтное раскрытие и toggle (Vitest + Testing Library + `user-event`); обновлённый Playwright `ui`-тест на клик-раскрытие узла (`e2e/org-tree.ui.spec.ts`)
 
 ### Что переписано руками и почему
 
