@@ -90,7 +90,28 @@ Frontend: React, Vite, TypeScript.
 
 ## Запуск проекта
 
-> Инструкция запуска одной командой (Docker) появится в Фазе 7 (BONUS). Ниже — текущий способ запуска по частям, актуальный после Фазы 2.
+### Одной командой (Docker)
+
+Требуется Docker и Docker Compose.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Приложение будет доступно на `http://localhost:8080` (порт настраивается через `CLIENT_PORT` в `.env`). Nginx отдаёт статику клиента с gzip и проксирует `/api/*` и `/ws/*` на backend-контейнер — отдельно настраивать `CORS`/адрес API не нужно, клиент и сервер работают через один origin.
+
+Проверить: `curl http://localhost:8080/api/org-tree` — должен вернуть JSON-массив узлов орг-структуры.
+
+Полезные вспомогательные скрипты (из корня репозитория):
+
+```bash
+npm run check:bundle-size   # сборка клиента + проверка лимита ≤200 КБ gzip (JS+CSS)
+npm run docker:smoke        # docker compose up -d --build, curl-проверка /api и /, затем down
+npm run test:e2e:docker     # Playwright ui-тест против уже поднятого docker-compose стенда
+```
+
+### По частям (без Docker)
 
 Mock API сервер (Python 3.12+, FastAPI):
 
@@ -122,6 +143,8 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
+Отдельный прогон против Docker-стенда — см. `npm run test:e2e:docker` выше (project-конфиг `playwright.docker.config.ts`, тесты в `e2e/docker-stand/`).
+
 ## AI в разработке
 
 Проект разрабатывается в паре с **Claude Code** (модель Claude Sonnet 5) — весь код, конфигурация и документация на данный момент сгенерированы ассистентом по шагам, под контролем и с подтверждением пользователя на каждом этапе (структура веток, состав фаз, инструменты тестирования и т.д. — решения пользователя, реализация — ассистента). Ручных правок кода на данный момент не вносилось; если они появятся, здесь будет зафиксировано, что именно и почему было переписано руками.
@@ -142,7 +165,8 @@ npm run test:e2e
 - **Фаза 4 (аналитическая таблица и агрегация):** чистая функция агрегации `aggregateOrgTree` (сумма headcount/budget, средняя performance, взвешенная по headcount, рекурсивно по потомкам) с unit-тестами (`client/src/features/org-table/model/aggregateOrgTree.ts`); форматтер бюджета `formatBudget` (`12 345 678 руб.`) с тестами; компонент `OrgTable` — сортировка по любому столбцу (клик — по возрастанию, двойной клик — реверс), фильтр по названию с дебаунсом 250мс (хук `useDebouncedValue`), клик по строке выделяет узел (`client/src/features/org-table/ui/`); `OrgTree` дополнен поддержкой `selectedId` — автораскрытие предков и подсветка выбранного узла; в `App` добавлены переключатель «Дерево/Таблица» и адаптивный split-view (≥1280px показывает оба панели одновременно через CSS media query, без изменения количества смонтированных React-компонентов); агрегаты и построение дерева мемоизированы через `useMemo`; добавлен Playwright `ui`-тест на сортировку/фильтр/синхронизацию выбора (`e2e/org-table.ui.spec.ts`); попутно исправлен пробел в тестовой инфраструктуре — добавлен `cleanup()` после каждого теста в `client/src/setupTests.ts` (ранее DOM не очищался между тестами в одном файле, из-за чего тесты, использующие повторяющиеся `data-testid`, падали при добавлении новых сценариев)
 - **Фаза 5 (live-обновления на сервере):** WebSocket-эндпоинт `GET /ws/org-tree` на FastAPI (`server/app/main.py`) с фоновой asyncio-задачей в `lifespan`, раз в `LIVE_UPDATE_INTERVAL_SECONDS` (по умолчанию 1с) выбирающей случайный узел и случайное поле (`headcount`/`budget`/`performance`) и рассылающей патч всем подключённым клиентам; генератор патчей и `ConnectionManager` (accept/disconnect/broadcast без падения при обрыве соединения) вынесены в `server/app/live_updates.py`; контракт патча `{ id, changes: { <field>: <value> }, updatedAt }` задан моделью `OrgNodePatch` (`server/app/models.py`); pytest-тесты на формат/мутацию патча (`server/tests/test_live_updates.py`) и на сам WebSocket-эндпоинт, включая устойчивость к disconnect (`server/tests/test_main.py`); Playwright `api`-тест подключения к `ws://localhost:4000/ws/org-tree` и валидации первого полученного патча (`e2e/org-tree-live.api.spec.ts`)
 - **Фаза 6 (live-обновления и UX на клиенте):** хук `useOrgTreeLiveUpdates` (`client/src/shared/lib/useOrgTreeLiveUpdates.ts`) подключается к `ws://.../ws/org-tree`, применяет патчи через колбэк и переподключается с экспоненциальным backoff (1с → ×2 → максимум 30с) при обрыве, отдавая статус `connecting/open/reconnecting/closed`; `useOrgTree` дополнен методом `applyPatch`, точечно обновляющим узел в кэше и состоянии без полного рефетча (`client/src/shared/lib/useOrgTree.ts`); частичный пересчёт агрегатов — `recalcAggregatesForPatch`/`findPathToRoot` в `aggregateOrgTree.ts` пересчитывают только путь «узел → корень», остальные записи карты агрегатов переносятся по ссылке без изменений, обёрнуто в хук `useIncrementalAggregates` с unit-тестами на частичный пересчёт; в `OrgTable` добавлены fade-подсветка обновлённых агрегатных ячеек (~1.5с, CSS `@keyframes` с учётом `prefers-reduced-motion`) и клавиатурная навигация по строкам (стрелки/`Home`/`End`/`Enter`, roving `tabIndex`); в `App` добавлен индикатор состояния соединения в шапке; анимация раскрытия ветки дерева через CSS-анимацию высоты в `OrgTree.module.css` (тоже с учётом `prefers-reduced-motion`); Playwright `ui`-тест на клавиатурную навигацию и индикатор соединения (`e2e/org-live-updates.ui.spec.ts`)
+- **Фаза 7 (production-сборка и Docker):** `server/Dockerfile` (Python 3.12-slim, `pip install -r requirements.txt`, запуск через uvicorn на `0.0.0.0:4000`) и `client/Dockerfile` (многоступенчатая сборка: `node:22-slim` → `npm run build` → статика отдаётся из `nginx:1.27-alpine`); `client/nginx.conf` — gzip для JS/CSS/JSON/SVG, проксирование `/api/*` и `/ws/*` (с `Upgrade`/`Connection` заголовками для WebSocket) на контейнер сервера по внутренней docker-сети, SPA-фолбэк `try_files … /index.html`; `docker-compose.yml` в корне (сервисы `server`/`client`, порт клиента и параметры сервера настраиваются через `.env`, см. `.env.example`); клиент собирается с `VITE_API_BASE_URL=""`, чтобы запросы и WebSocket шли на тот же origin, что и сам клиент (через Nginx-прокси) — без необходимости отдельно настраивать CORS; скрипт `scripts/check-bundle-size.sh` (`npm run check:bundle-size`) считает суммарный gzip-размер JS+CSS из `client/dist/assets` и падает при превышении лимита (200 КБ, фактически ~95 КБ); скрипт `scripts/docker-smoke.sh` (`npm run docker:smoke`) поднимает стенд через `docker compose up --build -d`, ждёт готовности и проверяет `/api/org-tree` и `/` через Nginx, затем гасит стенд; отдельный Playwright-конфиг `playwright.docker.config.ts` (без управления `webServer` — рассчитан на уже поднятый стенд) и тест `e2e/docker-stand/smoke.spec.ts` (`npm run test:e2e:docker`) проверяют, что приложение открывается и показывает дерево, а `/api/org-tree` доступен через Nginx-проксирование
 
 ### Что переписано руками и почему
 
-Пока ничего — весь код по-прежнему сгенерирован ассистентом. Раздел будет обновляться, если ассистентская реализация потребует ручной корректировки.
+- **Фаза 7 — `client/src/shared/lib/useOrgTreeLiveUpdates.test.ts`:** до Фазы 7 сборка клиента (`npm run build` → `tsc -b && vite build`) не запускалась в CI/Docker-контексте, поэтому осталась незамеченной ошибка типизации — параметр-свойство конструктора (`constructor(public url: string)`) в тестовом файле запрещено опцией `erasableSyntaxOnly` в `tsconfig.app.json`. Так как `client/Dockerfile` и `scripts/check-bundle-size.sh` вызывают именно `npm run build`, ошибка стала блокирующей. Ассистент сгенерировал исправление (явное поле `url: string` и присвоение в теле конструктора вместо параметр-свойства), пользователь не переписывал вручную — упомянуто здесь, поскольку это правка кода из предыдущей фазы, а не новый код Фазы 7.
