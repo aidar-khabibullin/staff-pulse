@@ -12,3 +12,10 @@ playwright-report-docker/
 test-results/
 /node_modules
 
+# Сторонние skill-пакеты Claude Code (вендорятся по skills-lock.json,
+# сам skills-lock.json коммитится)
+.agents/
+.claude/skills/requesting-code-review
+.claude/skills/ui-ux-pro-max
+.claude/skills/vercel-react-best-practices
+
