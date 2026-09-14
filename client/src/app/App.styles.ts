@@ -132,6 +132,47 @@ export const Layout = styled.div<{ 'data-view': 'tree' | 'table' }>`
   }
 `
 
+export const PanelTitle = styled.h2`
+  display: none;
+  flex: none;
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: ${({ theme }) => theme.colors.textDark};
+
+  @media (min-width: 1280px) {
+    display: block;
+  }
+`
+
+export const PerformanceLegend = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: ${({ theme }) => theme.colors.textMuted};
+`
+
+export const PerformanceLegendItem = styled.span<{ $level: 'high' | 'medium' | 'low' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  &::before {
+    content: '';
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: ${({ theme, $level }) =>
+      $level === 'high'
+        ? theme.colors.success
+        : $level === 'medium'
+          ? theme.colors.warning
+          : theme.colors.danger};
+  }
+`
+
 export const TreePanel = styled.section`
   display: flex;
   flex-direction: column;

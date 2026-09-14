@@ -18,9 +18,7 @@ test('вручную свёрнутая ветка дерева остаётся
   await expect(firstToggle).toHaveAttribute('aria-expanded', 'false')
 })
 
-test('клик по строке таблицы на узкой ширине раскрывает и скроллит к узлу в дереве после переключения вида', async ({
-  page,
-}) => {
+test('клик по строке таблицы на узкой ширине переключает вид на дерево и скроллит к узлу', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('org-tree').waitFor()
 
@@ -30,10 +28,11 @@ test('клик по строке таблицы на узкой ширине р�
   await targetRow.click()
   await expect(targetRow).toHaveAttribute('data-selected', 'true')
 
-  // На узкой ширине дерево скрыто через CSS (display: none), пока активна "Таблица" —
-  // scrollIntoView на скрытом узле браузер игнорирует, поэтому здесь проверяется
-  // именно повторная попытка скролла после переключения обратно на "Дерево".
-  await page.getByTestId('view-toggle-tree').click()
+  // Выбор строки на узкой ширине сам переключает вид на "Дерево" — иначе результат
+  // (раскрытие/скролл к узлу) остаётся не виден, пока пользователь не переключит вкладку
+  // вручную. scrollIntoView на скрытом (display: none) узле браузер игнорирует, поэтому
+  // важно, что переключение вида происходит автоматически, а не по ручному клику.
+  await expect(page.getByTestId('view-toggle-tree')).toHaveAttribute('aria-pressed', 'true')
   const targetTreeNode = page.locator(`[data-testid="org-tree-node"][data-node-id="${targetNodeId}"]`)
   await expect(targetTreeNode).toBeVisible()
 

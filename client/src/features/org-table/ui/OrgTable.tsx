@@ -13,6 +13,7 @@ import {
   Cell,
   Container,
   EmptyCell,
+  EmptyRow,
   FilterInput,
   HeaderCell,
   Row,
@@ -245,11 +246,11 @@ export function OrgTable({ nodes, selectedId, onSelect, lastPatch = null, filter
             ))}
 
             {rows.length === 0 && (
-              <tr>
+              <EmptyRow>
                 <EmptyCell colSpan={COLUMNS.length} data-testid="org-table-empty">
                   Ничего не найдено
                 </EmptyCell>
-              </tr>
+              </EmptyRow>
             )}
           </tbody>
         </Table>

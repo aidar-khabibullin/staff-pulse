@@ -37,6 +37,7 @@ export const TableScrollArea = styled.div`
 
 export const Table = styled.table`
   width: 100%;
+  height: 100%;
   border-collapse: collapse;
 `
 
@@ -119,9 +120,15 @@ export const Cell = styled.td<{ 'data-updated'?: boolean }>`
   }
 `
 
+export const EmptyRow = styled.tr`
+  height: 100%;
+`
+
 export const EmptyCell = styled.td`
+  height: 100%;
   padding: 1.5rem 0.75rem;
   text-align: center;
+  vertical-align: middle;
   color: ${({ theme }) => theme.colors.textMuted};
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `

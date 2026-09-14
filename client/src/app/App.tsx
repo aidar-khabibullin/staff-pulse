@@ -20,6 +20,9 @@ import {
   Footer,
   Header,
   Layout,
+  PanelTitle,
+  PerformanceLegend,
+  PerformanceLegendItem,
   Spinner,
   Status,
   StatusText,
@@ -66,6 +69,14 @@ export function App() {
     const tree = buildOrgTree(data);
     return computeMatchedIds(tree, parsedQuery.filter);
   }, [data, parsedQuery]);
+
+  // На узкой ширине показан только один вид за раз — при выборе строки в таблице
+  // переключаемся на "Дерево", иначе результат (раскрытие/скролл к узлу) останется
+  // не виден, пока пользователь вручную не переключит вкладку.
+  const handleSelectFromTable = useCallback((id: string) => {
+    setSelectedId(id);
+    setView("tree");
+  }, []);
 
   const handlePatch = useCallback(
     (patch: OrgNodePatchMessage) => {
@@ -146,25 +157,35 @@ export function App() {
       )}
 
       {data !== null && data.length > 0 && (
-        <Layout data-view={view}>
-          <TreePanel>
-            <OrgTree
-              nodes={data}
-              selectedId={selectedId}
-              matchedIds={matchedIds}
-              activeView={view}
-            />
-          </TreePanel>
-          <TablePanel>
-            <OrgTable
-              nodes={data}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              lastPatch={lastPatch}
-              filter={parsedQuery.filter}
-            />
-          </TablePanel>
-        </Layout>
+        <>
+          <PerformanceLegend data-testid="performance-legend">
+            <PerformanceLegendItem $level="high">Эффективность ≥ 80 — высокая</PerformanceLegendItem>
+            <PerformanceLegendItem $level="medium">50–79 — средняя</PerformanceLegendItem>
+            <PerformanceLegendItem $level="low">&lt; 50 — низкая</PerformanceLegendItem>
+          </PerformanceLegend>
+
+          <Layout data-view={view}>
+            <TreePanel>
+              <PanelTitle>Дерево</PanelTitle>
+              <OrgTree
+                nodes={data}
+                selectedId={selectedId}
+                matchedIds={matchedIds}
+                activeView={view}
+              />
+            </TreePanel>
+            <TablePanel>
+              <PanelTitle>Таблица</PanelTitle>
+              <OrgTable
+                nodes={data}
+                selectedId={selectedId}
+                onSelect={handleSelectFromTable}
+                lastPatch={lastPatch}
+                filter={parsedQuery.filter}
+              />
+            </TablePanel>
+          </Layout>
+        </>
       )}
 
       <Footer>© {CURRENT_YEAR} Орг-структура компании</Footer>

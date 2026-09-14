@@ -5,6 +5,7 @@ import { buildOrgTree, type OrgTreeNode } from '../model/buildOrgTree'
 import {
   Children,
   Empty,
+  EXPAND_ANIMATION_MS,
   Node,
   NodeMeta,
   NodeName,
@@ -131,6 +132,7 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null, activeVie
   )
   const nodeElementsRef = useRef<Map<string, HTMLDivElement>>(new Map())
   const scrolledKeyRef = useRef<string | null>(null)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const registerNodeRef = (id: string, element: HTMLDivElement | null): void => {
     if (element) {
       nodeElementsRef.current.set(id, element)
@@ -169,10 +171,11 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null, activeVie
   const visibleExpandedIds = isFiltering ? collectAllIds(tree) : expandedIds
 
   // Ждём, пока предки выбранного узла раскроются (эффект выше) и он появится в DOM,
-  // затем скроллим к нему — иначе при клике по строке таблицы выбор в дереве
-  // происходит вне видимой области и незаметен пользователю. Ключ включает
-  // activeView, чтобы повторить попытку при переключении с "Таблицы" на "Дерево"
-  // на узких экранах (первая попытка на скрытой панели браузером игнорируется).
+  // затем скроллим к нему так, чтобы узел оказался у верхнего края области — иначе
+  // при клике по строке таблицы выбор в дереве происходит вне видимой области и
+  // незаметен пользователю. Ключ включает activeView, чтобы повторить попытку при
+  // переключении с "Таблицы" на "Дерево" на узких экранах (первая попытка на
+  // скрытой панели браузером игнорируется).
   useEffect(() => {
     if (!selectedId) {
       scrolledKeyRef.current = null
@@ -186,8 +189,21 @@ export function OrgTree({ nodes, selectedId = null, matchedIds = null, activeVie
     if (!element) {
       return
     }
-    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    scrolledKeyRef.current = key
+    // Только что раскрытая ветка ещё анимируется (max-height растёт CSS-анимацией
+    // EXPAND_ANIMATION_MS) — если скроллить сразу, позиция считается по неготовому
+    // макету и узел не дожимается до верхнего края. Ждём конца анимации.
+    scrollTimerRef.current = setTimeout(() => {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrolledKeyRef.current = key
+      scrollTimerRef.current = null
+    }, EXPAND_ANIMATION_MS + 20)
+
+    return () => {
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current)
+        scrollTimerRef.current = null
+      }
+    }
   }, [selectedId, visibleExpandedIds, activeView])
 
   const handleToggle = (id: string) => {

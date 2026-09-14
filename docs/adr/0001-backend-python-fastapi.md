@@ -22,6 +22,6 @@ Frontend, e2e-тесты (`playwright.config.ts`) и остальная доку
 
 ## Последствия
 
-- Backend теперь на Python 3.12+ (venv, `requirements-dev.txt`), что требует отдельного шага установки при локальном запуске без Docker (описано в README).
+- Backend теперь на Python 3.14+ (venv, `requirements-dev.txt`), что требует отдельного шага установки при локальном запуске без Docker (описано в README).
 - WebSocket live-обновления (Фаза 5) реализованы сразу на FastAPI/`asyncio`, без миграции с Node — переезд состоялся до появления этой фичи.
 - CI/Docker-конфигурация (`server/Dockerfile`) ориентируется на `pip install` и uvicorn, а не на `npm`/`node`.
