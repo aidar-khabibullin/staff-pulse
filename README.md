@@ -86,6 +86,9 @@ Frontend: React, Vite, TypeScript.
 
 - [`docs/prd-org-structure-dashboard.md`](docs/prd-org-structure-dashboard.md) — PRD
 - [`docs/plan-org-structure-dashboard.md`](docs/plan-org-structure-dashboard.md) — план фаз реализации, отмечается по ходу работы
+- [`docs/architecture.md`](docs/architecture.md) — слои приложения, поток данных от API до UI
+- [`docs/data-model.md`](docs/data-model.md) — дерево, алгоритм агрегации, контракт live-патча
+- [`docs/adr/`](docs/adr/) — ADR для нетривиальных решений (backend на Python/FastAPI, WebSocket для live-обновлений, детерминированный парсер AI-поиска)
 - [`CLAUDE.md`](CLAUDE.md) — рабочие правила проекта для Claude Code
 
 ## Запуск проекта
@@ -145,6 +148,20 @@ npm run test:e2e
 
 Отдельный прогон против Docker-стенда — см. `npm run test:e2e:docker` выше (project-конфиг `playwright.docker.config.ts`, тесты в `e2e/docker-stand/`).
 
+### Результаты полного прогона тестов (Фаза 9, 2026-09-14)
+
+```
+server (pytest):   11 passed
+client (vitest):   39 passed (10 test files)
+e2e (playwright):  11 passed — projects "api" и "ui", все фазы 1–8
+```
+
+## Скриншоты
+
+| Дерево | Таблица | AI-поиск |
+| --- | --- | --- |
+| ![Дерево орг-структуры](docs/media/tree-view.jpg) | ![Аналитическая таблица](docs/media/table-view.jpg) | ![AI-поиск](docs/media/ai-search.jpg) |
+
 ## AI в разработке
 
 Проект разрабатывается в паре с **Claude Code** (модель Claude Sonnet 5) — весь код, конфигурация и документация на данный момент сгенерированы ассистентом по шагам, под контролем и с подтверждением пользователя на каждом этапе (структура веток, состав фаз, инструменты тестирования и т.д. — решения пользователя, реализация — ассистента). Ручных правок кода на данный момент не вносилось; если они появятся, здесь будет зафиксировано, что именно и почему было переписано руками.
@@ -167,6 +184,7 @@ npm run test:e2e
 - **Фаза 6 (live-обновления и UX на клиенте):** хук `useOrgTreeLiveUpdates` (`client/src/shared/lib/useOrgTreeLiveUpdates.ts`) подключается к `ws://.../ws/org-tree`, применяет патчи через колбэк и переподключается с экспоненциальным backoff (1с → ×2 → максимум 30с) при обрыве, отдавая статус `connecting/open/reconnecting/closed`; `useOrgTree` дополнен методом `applyPatch`, точечно обновляющим узел в кэше и состоянии без полного рефетча (`client/src/shared/lib/useOrgTree.ts`); частичный пересчёт агрегатов — `recalcAggregatesForPatch`/`findPathToRoot` в `aggregateOrgTree.ts` пересчитывают только путь «узел → корень», остальные записи карты агрегатов переносятся по ссылке без изменений, обёрнуто в хук `useIncrementalAggregates` с unit-тестами на частичный пересчёт; в `OrgTable` добавлены fade-подсветка обновлённых агрегатных ячеек (~1.5с, CSS `@keyframes` с учётом `prefers-reduced-motion`) и клавиатурная навигация по строкам (стрелки/`Home`/`End`/`Enter`, roving `tabIndex`); в `App` добавлен индикатор состояния соединения в шапке; анимация раскрытия ветки дерева через CSS-анимацию высоты в `OrgTree.module.css` (тоже с учётом `prefers-reduced-motion`); Playwright `ui`-тест на клавиатурную навигацию и индикатор соединения (`e2e/org-live-updates.ui.spec.ts`)
 - **Фаза 7 (production-сборка и Docker):** `server/Dockerfile` (Python 3.12-slim, `pip install -r requirements.txt`, запуск через uvicorn на `0.0.0.0:4000`) и `client/Dockerfile` (многоступенчатая сборка: `node:22-slim` → `npm run build` → статика отдаётся из `nginx:1.27-alpine`); `client/nginx.conf` — gzip для JS/CSS/JSON/SVG, проксирование `/api/*` и `/ws/*` (с `Upgrade`/`Connection` заголовками для WebSocket) на контейнер сервера по внутренней docker-сети, SPA-фолбэк `try_files … /index.html`; `docker-compose.yml` в корне (сервисы `server`/`client`, порт клиента и параметры сервера настраиваются через `.env`, см. `.env.example`); клиент собирается с `VITE_API_BASE_URL=""`, чтобы запросы и WebSocket шли на тот же origin, что и сам клиент (через Nginx-прокси) — без необходимости отдельно настраивать CORS; скрипт `scripts/check-bundle-size.sh` (`npm run check:bundle-size`) считает суммарный gzip-размер JS+CSS из `client/dist/assets` и падает при превышении лимита (200 КБ, фактически ~95 КБ); скрипт `scripts/docker-smoke.sh` (`npm run docker:smoke`) поднимает стенд через `docker compose up --build -d`, ждёт готовности и проверяет `/api/org-tree` и `/` через Nginx, затем гасит стенд; отдельный Playwright-конфиг `playwright.docker.config.ts` (без управления `webServer` — рассчитан на уже поднятый стенд) и тест `e2e/docker-stand/smoke.spec.ts` (`npm run test:e2e:docker`) проверяют, что приложение открывается и показывает дерево, а `/api/org-tree` доступен через Nginx-проксирование
 - **Фаза 8 (AI-поиск на естественном языке):** без реального LLM API-ключа в проекте (Фаза 8 — только frontend, добавлять backend-прокси к внешнему AI-провайдеру не входило в скоуп) реализован детерминированный клиентский NLP-парсер `parseNaturalLanguageQuery` (`client/src/features/ai-search/model/`), разбирающий запросы вида «эффективность выше 80», «уровень 2», «второй уровень», «бюджет больше 5 000 000», «сотрудников не менее 10» в структурированный фильтр `{ text, level, metric }`; функция `computeMatchedIds`/`pruneTree` применяют фильтр и к дереву (сохраняя путь предков до совпадений, авто-раскрывая их), и к таблице (AND с существующим текстовым фильтром колонки); если ни один паттерн не распознан — явный fallback на обычный текстовый поиск по названию с индикатором режима в UI (`AiSearchBar`, `client/src/features/ai-search/ui/`); unit-тесты на парсер (все поддерживаемые паттерны + оба fallback-сценария: нераспознанный запрос и запрос с ключевым словом метрики без оператора/числа) и на применение фильтра (`parseNaturalLanguageQuery.test.ts`, `applyStructuredFilter.test.ts`); Playwright `ui`-тест на фильтрацию по уровню (стабильна к live-патчам, в отличие от фильтра по метрике, который патчится каждую секунду) и на fallback-сценарий (`e2e/ai-search.ui.spec.ts`)
+- **Фаза 9 (документация и финализация):** `docs/architecture.md` (слои приложения и поток данных от API до UI) и `docs/data-model.md` (контракт узла, построение дерева, алгоритм агрегации и её частичного пересчёта, контракт live-патча) написаны ассистентом на основе фактического кода репозитория (не по памяти о задании — каждое утверждение сверено с исходниками); три ADR в `docs/adr/` задокументированы задним числом по уже принятым в предыдущих фазах решениям (переход backend на Python/FastAPI, выбор WebSocket вместо SSE/поллинга для live-обновлений, детерминированный парсер вместо внешнего LLM API для AI-поиска), включая рассмотренные альтернативы и последствия; скриншоты дерева, таблицы и AI-поиска (`docs/media/`) сделаны автоматизацией браузера (Claude in Chrome) на локально поднятом сервере и клиенте; проставлен недостающий тег `step/1` (Фазы 1–3, отсутствовавший до этой фазы) и передвинут `step/4` на merge-коммит Фазы 9 — по карте тегов в `CLAUDE.md` (`step/4` покрывает Фазы 7–9, ранее он указывал только на Фазу 7); полный прогон `pytest`/`vitest`/`Playwright` зафиксирован в этом README (раздел «Результаты полного прогона тестов»)
 
 ### Что переписано руками и почему
 
