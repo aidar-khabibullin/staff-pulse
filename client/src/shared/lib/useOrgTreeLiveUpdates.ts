@@ -13,7 +13,7 @@ const INITIAL_RECONNECT_DELAY_MS = 1000
 const MAX_RECONNECT_DELAY_MS = 30000
 
 function toWebSocketUrl(baseUrl: string): string {
-  const url = new URL('/ws/org-tree', baseUrl)
+  const url = new URL('/ws/org-tree', baseUrl || window.location.origin)
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
   return url.toString()
 }

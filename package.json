@@ -5,7 +5,10 @@
   "description": "E2E-тесты (Playwright) на уровне репозитория для дашборда мониторинга орг-структуры",
   "scripts": {
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:docker": "playwright test --config=playwright.docker.config.ts",
+    "check:bundle-size": "bash scripts/check-bundle-size.sh",
+    "docker:smoke": "bash scripts/docker-smoke.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1"

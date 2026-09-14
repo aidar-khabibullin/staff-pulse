@@ -8,6 +8,7 @@ build/
 coverage/
 .claude/settings.local.json
 playwright-report/
+playwright-report-docker/
 test-results/
 /node_modules
 
