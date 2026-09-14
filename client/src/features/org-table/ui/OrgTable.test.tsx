@@ -72,4 +72,44 @@ describe('OrgTable', () => {
 
     expect(onSelect).toHaveBeenCalledWith('div-1')
   })
+
+  it('клавиатурная навигация: стрелки перемещают фокус, Home/End к краям, Enter выбирает строку', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    render(<OrgTable nodes={nodes} selectedId={null} onSelect={onSelect} />)
+
+    const rows = screen.getAllByTestId('org-table-row')
+    rows[0].focus()
+    expect(rows[0]).toHaveFocus()
+
+    await user.keyboard('{ArrowDown}')
+    expect(rows[1]).toHaveFocus()
+
+    await user.keyboard('{ArrowUp}')
+    expect(rows[0]).toHaveFocus()
+
+    await user.keyboard('{End}')
+    expect(rows[rows.length - 1]).toHaveFocus()
+
+    await user.keyboard('{Home}')
+    expect(rows[0]).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+    expect(onSelect).toHaveBeenCalledWith('div-1')
+  })
+
+  it('патч подсвечивает изменённые агрегатные ячейки затронутого узла', () => {
+    render(
+      <OrgTable
+        nodes={nodes}
+        selectedId={null}
+        onSelect={() => {}}
+        lastPatch={{ nodeId: 'div-1', seq: 1 }}
+      />,
+    )
+
+    const row = screen.getAllByTestId('org-table-row').find((r) => r.dataset.nodeId === 'div-1')!
+    const headcountCell = within(row).getAllByRole('cell')[2]
+    expect(headcountCell).toHaveAttribute('data-updated', 'true')
+  })
 })
